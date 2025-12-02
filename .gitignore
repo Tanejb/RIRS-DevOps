@@ -47,3 +47,6 @@ dist/
 *.tmp
 *.temp
 
+# Database connection info (sensitive)
+baza_povezava.txt
+
