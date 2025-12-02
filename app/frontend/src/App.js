@@ -12,6 +12,8 @@ function App() {
   const [registerForm, setRegisterForm] = useState({ username: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [editingTodo, setEditingTodo] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '' });
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -118,6 +120,36 @@ function App() {
     }
   };
 
+  const handleEditTodo = (todo) => {
+    setEditingTodo(todo._id);
+    setEditForm({ title: todo.title, description: todo.description || '' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTodo(null);
+    setEditForm({ title: '', description: '' });
+  };
+
+  const handleUpdateTodo = async (todoId) => {
+    if (!editForm.title.trim()) {
+      alert('Title cannot be empty');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await axios.put(`${API_BASE_URL}/todos/${todoId}`, editForm);
+      setTodos(todos.map(todo => 
+        todo._id === todoId ? response.data.todo : todo
+      ));
+      setEditingTodo(null);
+      setEditForm({ title: '', description: '' });
+    } catch (error) {
+      alert('Error updating todo: ' + (error.response?.data?.error || error.message));
+    }
+    setLoading(false);
+  };
+
   if (!user) {
     return (
       <div className="app">
@@ -222,27 +254,74 @@ function App() {
             <div className="todos-list">
               {todos.map(todo => (
                 <div key={todo._id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-                  <div className="todo-content">
-                    <h3>{todo.title}</h3>
-                    {todo.description && <p>{todo.description}</p>}
-                    <small>
-                      Created: {new Date(todo.created_at).toLocaleDateString()}
-                    </small>
-                  </div>
-                  <div className="todo-actions">
-                    <button 
-                      onClick={() => handleToggleTodo(todo._id)}
-                      className={`toggle-btn ${todo.completed ? 'completed' : ''}`}
-                    >
-                      {todo.completed ? '✓' : '○'}
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteTodo(todo._id)}
-                      className="delete-btn"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  {editingTodo === todo._id ? (
+                    <div className="todo-edit-form">
+                      <input
+                        type="text"
+                        value={editForm.title}
+                        onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                        placeholder="Todo title"
+                        className="edit-input"
+                        required
+                      />
+                      <input
+                        type="text"
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                        placeholder="Description (optional)"
+                        className="edit-input"
+                      />
+                      <div className="edit-actions">
+                        <button 
+                          onClick={() => handleUpdateTodo(todo._id)}
+                          className="save-btn"
+                          disabled={loading}
+                        >
+                          {loading ? 'Saving...' : 'Save'}
+                        </button>
+                        <button 
+                          onClick={handleCancelEdit}
+                          className="cancel-btn"
+                          disabled={loading}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="todo-content">
+                        <h3>{todo.title}</h3>
+                        {todo.description && <p>{todo.description}</p>}
+                        <small>
+                          Created: {new Date(todo.created_at).toLocaleDateString()}
+                        </small>
+                      </div>
+                      <div className="todo-actions">
+                        <button 
+                          onClick={() => handleEditTodo(todo)}
+                          className="edit-btn"
+                          title="Edit todo"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          onClick={() => handleToggleTodo(todo._id)}
+                          className={`toggle-btn ${todo.completed ? 'completed' : ''}`}
+                          title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                        >
+                          {todo.completed ? '✓' : '○'}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteTodo(todo._id)}
+                          className="delete-btn"
+                          title="Delete todo"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
