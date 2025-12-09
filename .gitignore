@@ -47,6 +47,13 @@ dist/
 *.tmp
 *.temp
 
+# Coverage / test artifacts
+.coverage
+coverage/
+backend/.coverage
+backend/htmlcov/
+frontend/coverage/
+
 # Database connection info (sensitive)
 baza_povezava.txt
 
