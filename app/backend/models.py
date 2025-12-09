@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -34,7 +34,7 @@ class Database:
         user = {
             'username': username,
             'password': hashed_password,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.now(timezone.utc)
         }
         return self.users.insert_one(user)
     
@@ -49,14 +49,14 @@ class Database:
             'title': title,
             'description': description,
             'completed': False,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }
         return self.todos.insert_one(todo)
     
     def update_todo(self, todo_id, username, update_data):
         """Update a todo"""
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.now(timezone.utc)
         return self.todos.update_one(
             {'_id': todo_id, 'username': username},
             {'$set': update_data}
@@ -75,7 +75,7 @@ class Database:
         new_status = not todo.get('completed', False)
         result = self.todos.update_one(
             {'_id': todo_id, 'username': username},
-            {'$set': {'completed': new_status, 'updated_at': datetime.utcnow()}}
+            {'$set': {'completed': new_status, 'updated_at': datetime.now(timezone.utc)}}
         )
         return result if result.matched_count > 0 else None
 

@@ -22,8 +22,8 @@ def create_app():
     JWTManager(app)
     
     # Register blueprints
-    from routes.auth import auth_bp
-    from routes.todos import todos_bp
+    from backend.routes.auth import auth_bp
+    from backend.routes.todos import todos_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(todos_bp, url_prefix='/api/todos')
