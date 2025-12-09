@@ -3,9 +3,12 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables
-load_dotenv()
+# Look for .env in backend directory
+env_path = Path(__file__).parent / '.env'
+load_dotenv(env_path)
 
 def create_app():
     app = Flask(__name__)
