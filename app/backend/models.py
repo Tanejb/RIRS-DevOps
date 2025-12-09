@@ -2,9 +2,12 @@ from pymongo import MongoClient
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables
-load_dotenv()
+# Look for .env in backend directory
+env_path = Path(__file__).parent / '.env'
+load_dotenv(env_path)
 
 # MongoDB connection
 MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
