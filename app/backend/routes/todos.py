@@ -1,8 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from backend.models import db
 from bson import ObjectId
+try:
+    from backend.models import db
+except ImportError:
+    from models import db
 
 todos_bp = Blueprint('todos', __name__)
 
