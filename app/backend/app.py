@@ -2,7 +2,14 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Ensure project root is on sys.path so `backend.*` imports work when running directly
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
 from pathlib import Path
 
 # Load environment variables

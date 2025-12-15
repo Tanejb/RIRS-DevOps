@@ -34,6 +34,10 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests with coverage
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'todoapp' }}
         run: |
           python -m pytest --cov=backend --cov-report=xml
 
