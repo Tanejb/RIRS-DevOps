@@ -306,6 +306,25 @@ body {
   color: white;
 }
 
+.edit-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #667eea;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
 .delete-btn {
   width: 40px;
   height: 40px;
@@ -323,6 +342,76 @@ body {
 .delete-btn:hover {
   background: #ff6b6b;
   color: white;
+}
+
+/* Edit Form Styles */
+.todo-edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.edit-input {
+  padding: 12px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #5a6fd8;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: #999;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #777;
+}
+
+.cancel-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Responsive Design */
