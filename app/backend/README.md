@@ -17,8 +17,11 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/todoapp?retryWri
 
 3. Zaženi aplikacijo:
 ```bash
+cd app/backend
 python app.py
 ```
+
+**Opomba:** `.env` datoteka mora biti v `app/backend/` mapi.
 
 ## API Endpoints
 
