@@ -166,7 +166,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/rirs-todo-backend:latest
             ${{ secrets.DOCKER_USERNAME }}/rirs-todo-backend:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/rirs-todo-backend:${{ github.ref_name }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rirs-todo-backend:latest
           cache-to: type=inline
 
@@ -194,7 +193,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/rirs-todo-frontend:latest
             ${{ secrets.DOCKER_USERNAME }}/rirs-todo-frontend:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/rirs-todo-frontend:${{ github.ref_name }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rirs-todo-frontend:latest
           cache-to: type=inline
 
