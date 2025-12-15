@@ -290,14 +290,14 @@ function App() {
                     </div>
                   ) : (
                     <>
-                      <div className="todo-content">
-                        <h3>{todo.title}</h3>
-                        {todo.description && <p>{todo.description}</p>}
-                        <small>
-                          Created: {new Date(todo.created_at).toLocaleDateString()}
-                        </small>
-                      </div>
-                      <div className="todo-actions">
+                  <div className="todo-content">
+                    <h3>{todo.title}</h3>
+                    {todo.description && <p>{todo.description}</p>}
+                    <small>
+                      Created: {new Date(todo.created_at).toLocaleDateString()}
+                    </small>
+                  </div>
+                  <div className="todo-actions">
                         <button 
                           onClick={() => handleEditTodo(todo)}
                           className="edit-btn"
@@ -305,21 +305,21 @@ function App() {
                         >
                           ✏️
                         </button>
-                        <button 
-                          onClick={() => handleToggleTodo(todo._id)}
-                          className={`toggle-btn ${todo.completed ? 'completed' : ''}`}
+                    <button 
+                      onClick={() => handleToggleTodo(todo._id)}
+                      className={`toggle-btn ${todo.completed ? 'completed' : ''}`}
                           title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
-                        >
-                          {todo.completed ? '✓' : '○'}
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteTodo(todo._id)}
-                          className="delete-btn"
+                    >
+                      {todo.completed ? '✓' : '○'}
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="delete-btn"
                           title="Delete todo"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                    >
+                      🗑️
+                    </button>
+                  </div>
                     </>
                   )}
                 </div>
