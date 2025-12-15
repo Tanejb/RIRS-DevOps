@@ -2,7 +2,10 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import bcrypt
 from datetime import datetime
-from backend.models import db
+try:
+    from backend.models import db
+except ImportError:
+    from models import db
 
 auth_bp = Blueprint('auth', __name__)
 
