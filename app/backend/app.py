@@ -29,8 +29,16 @@ def create_app():
     JWTManager(app)
     
     # Register blueprints
-    from backend.routes.auth import auth_bp
-    from backend.routes.todos import todos_bp
+    # In Docker, files are in /app, not /app/backend
+    try:
+        from backend.routes.auth import auth_bp
+        from backend.routes.todos import todos_bp
+    except ImportError:
+        # Fallback for Docker environment where files are directly in /app
+        import sys
+        sys.path.insert(0, '/app')
+        from routes.auth import auth_bp
+        from routes.todos import todos_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(todos_bp, url_prefix='/api/todos')
@@ -39,4 +47,5 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
