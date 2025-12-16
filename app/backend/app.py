@@ -25,7 +25,18 @@ def create_app():
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for simplicity
     
     # Initialize extensions
-    CORS(app)  # Enable CORS for frontend communication
+    # CORS configuration - allow Render frontend
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:3000",
+                "https://rirs-devops-frontend.onrender.com",
+                "https://*.onrender.com"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
     JWTManager(app)
     
     # Register blueprints
