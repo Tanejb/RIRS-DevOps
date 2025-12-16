@@ -25,18 +25,12 @@ def create_app():
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for simplicity
     
     # Initialize extensions
-    # CORS configuration - allow Render frontend
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:3000",
-                "https://rirs-devops-frontend.onrender.com",
-                "https://*.onrender.com"
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+    # CORS configuration - allow all origins for production deployment
+    # In production, you can restrict this to specific domains
+    allowed_origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
+    CORS(app, 
+         resources={r"/api/*": {"origins": allowed_origins}},
+         supports_credentials=True)
     JWTManager(app)
     
     # Register blueprints
