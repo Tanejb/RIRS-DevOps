@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 import os
@@ -40,13 +40,16 @@ def create_app():
         from backend.routes.todos import todos_bp
     except ImportError:
         # Fallback for Docker environment where files are directly in /app
-        import sys
-        sys.path.insert(0, '/app')
         from routes.auth import auth_bp
         from routes.todos import todos_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(todos_bp, url_prefix='/api/todos')
+    
+    # Health check endpoint
+    @app.route('/')
+    def health_check():
+        return jsonify({'status': 'ok', 'message': 'Backend is running'}), 200
     
     return app
 
