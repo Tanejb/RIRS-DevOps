@@ -126,25 +126,65 @@ jobs:
           name: sonarcloud-report
           path: .scannerwork/
 
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract analysis ID from report
+        id: analysis-id
+        run: |
+          if [ -f .scannerwork/report-task.txt ]; then
+            ANALYSIS_ID=$(grep "ceTaskId" .scannerwork/report-task.txt | cut -d'=' -f2)
+            echo "analysis-id=$ANALYSIS_ID" >> $GITHUB_OUTPUT
+            echo "Analysis ID: $ANALYSIS_ID"
+          else
+            echo "Report file not found!"
+            exit 1
+          fi
+
       - name: Wait for Quality Gate
         id: quality-gate-check
-        uses: sonarsource/sonarcloud-quality-gate-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: .scannerwork/report-task.txt
-
-      - name: Check Quality Gate status
-        if: steps.quality-gate-check.outputs.quality-gate-status != 'OK'
+          PROJECT_KEY: Tanejb_RIRS-DevOps
         run: |
-          echo "❌ Quality Gate failed with status: ${{ steps.quality-gate-check.outputs.quality-gate-status }}"
-          echo "Please check SonarCloud dashboard for details."
+          ANALYSIS_ID="${{ steps.analysis-id.outputs.analysis-id }}"
+          echo "Waiting for Quality Gate for analysis: $ANALYSIS_ID"
+          
+          # Wait up to 5 minutes for quality gate to be ready
+          for i in {1..30}; do
+            STATUS=$(curl -s -u "${SONAR_TOKEN}:" \
+              "https://sonarcloud.io/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}" | \
+              jq -r '.projectStatus.status // "PENDING"')
+            
+            echo "Quality Gate status: $STATUS (attempt $i/30)"
+            
+            if [ "$STATUS" = "OK" ]; then
+              echo "✅ Quality Gate passed!"
+              echo "status=OK" >> $GITHUB_OUTPUT
+              exit 0
+            elif [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "WARN" ]; then
+              echo "❌ Quality Gate failed with status: $STATUS"
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          echo "⏱️ Quality Gate check timed out"
+          echo "status=TIMEOUT" >> $GITHUB_OUTPUT
           exit 1
 
-      - name: Quality Gate passed
-        if: steps.quality-gate-check.outputs.quality-gate-status == 'OK'
+      - name: Show Quality Gate details
+        if: steps.quality-gate-check.outcome == 'failure'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "✅ Quality Gate passed successfully!"
+          ANALYSIS_ID="${{ steps.analysis-id.outputs.analysis-id }}"
+          curl -s -u "${SONAR_TOKEN}:" \
+            "https://sonarcloud.io/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}" | jq '.'
+          echo "Please check SonarCloud dashboard for details: https://sonarcloud.io/project/overview?id=Tanejb_RIRS-DevOps"
 
   backend-build:
     runs-on: ubuntu-latest
