@@ -179,23 +179,33 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PROJECT_KEY: Tanejb_RIRS-DevOps
         run: |
-          ANALYSIS_ID="${{ steps.wait-analysis.outputs.analysis-id }}"
+          echo "Checking Quality Gate for project: $PROJECT_KEY"
           
-          if [ -z "$ANALYSIS_ID" ]; then
-            echo "❌ Could not get analysis ID"
-            exit 1
+          # Determine branch name
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
           fi
           
-          echo "Checking Quality Gate for analysis: $ANALYSIS_ID"
+          echo "Checking Quality Gate for branch: $BRANCH"
           
-          # Wait for quality gate (up to 2 minutes)
-          for i in {1..12}; do
+          # Wait for quality gate (up to 3 minutes)
+          for i in {1..18}; do
+            # Try with project key and branch
             RESPONSE=$(curl -s -u "${SONAR_TOKEN}:" \
-              "https://sonarcloud.io/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}")
+              "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${PROJECT_KEY}&branch=${BRANCH}")
             
             STATUS=$(echo "$RESPONSE" | jq -r '.projectStatus.status // "PENDING"')
             
-            echo "Quality Gate status: $STATUS (attempt $i/12)"
+            # If still PENDING, try without branch (for main branch)
+            if [ "$STATUS" = "PENDING" ] && [ "$i" -gt 6 ]; then
+              RESPONSE=$(curl -s -u "${SONAR_TOKEN}:" \
+                "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${PROJECT_KEY}")
+              STATUS=$(echo "$RESPONSE" | jq -r '.projectStatus.status // "PENDING"')
+            fi
+            
+            echo "Quality Gate status: $STATUS (attempt $i/18)"
             
             if [ "$STATUS" = "OK" ]; then
               echo "✅ Quality Gate passed!"
@@ -211,8 +221,11 @@ jobs:
             sleep 10
           done
           
-          echo "⏱️ Quality Gate check timed out"
+          echo "⏱️ Quality Gate check timed out after 3 minutes"
+          echo "⚠️ Note: Quality Gate may still be processing. Check SonarCloud dashboard manually."
+          echo "Dashboard: https://sonarcloud.io/project/overview?id=${PROJECT_KEY}"
           echo "status=TIMEOUT" >> $GITHUB_OUTPUT
+          # Fail the build if quality gate times out (required for Production deployment)
           exit 1
 
       - name: Show Quality Gate details
