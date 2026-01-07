@@ -126,22 +126,116 @@ jobs:
           name: sonarcloud-report
           path: .scannerwork/
 
-      - name: Verify analysis completed
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract task ID and wait for analysis
+        id: wait-analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           if [ ! -f .scannerwork/report-task.txt ]; then
             echo "❌ SonarCloud analysis report not found!"
             exit 1
           fi
           
-          echo "✅ SonarCloud analysis completed successfully"
-          echo ""
-          echo "📊 Analysis details:"
-          cat .scannerwork/report-task.txt
-          echo ""
-          echo "📈 Check quality gate status in SonarCloud dashboard:"
-          echo "   https://sonarcloud.io/project/overview?id=Tanejb_RIRS-DevOps"
-          echo ""
-          echo "⚠️ Note: For Production deployment, ensure quality gate passes in SonarCloud dashboard."
+          TASK_ID=$(grep "ceTaskId" .scannerwork/report-task.txt | cut -d'=' -f2)
+          echo "task-id=$TASK_ID" >> $GITHUB_OUTPUT
+          echo "Waiting for analysis task to complete: $TASK_ID"
+          
+          # Wait for ceTask to complete (up to 5 minutes)
+          for i in {1..30}; do
+            TASK_STATUS=$(curl -s -u "${SONAR_TOKEN}:" \
+              "https://sonarcloud.io/api/ce/task?id=${TASK_ID}" | \
+              jq -r '.task.status // "PENDING"')
+            
+            echo "Analysis task status: $TASK_STATUS (attempt $i/30)"
+            
+            if [ "$TASK_STATUS" = "SUCCESS" ]; then
+              ANALYSIS_ID=$(curl -s -u "${SONAR_TOKEN}:" \
+                "https://sonarcloud.io/api/ce/task?id=${TASK_ID}" | \
+                jq -r '.task.analysisId // ""')
+              echo "analysis-id=$ANALYSIS_ID" >> $GITHUB_OUTPUT
+              echo "✅ Analysis completed with ID: $ANALYSIS_ID"
+              break
+            elif [ "$TASK_STATUS" = "FAILED" ] || [ "$TASK_STATUS" = "CANCELED" ]; then
+              echo "❌ Analysis task failed with status: $TASK_STATUS"
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          if [ -z "$ANALYSIS_ID" ]; then
+            echo "❌ Could not get analysis ID - task may still be processing"
+            exit 1
+          fi
+
+      - name: Wait for Quality Gate using SonarCloud API
+        id: quality-gate-check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PROJECT_KEY: Tanejb_RIRS-DevOps
+        run: |
+          ANALYSIS_ID="${{ steps.wait-analysis.outputs.analysis-id }}"
+          
+          if [ -z "$ANALYSIS_ID" ]; then
+            echo "❌ Could not get analysis ID"
+            exit 1
+          fi
+          
+          echo "Checking Quality Gate for analysis: $ANALYSIS_ID"
+          echo "Project: $PROJECT_KEY"
+          
+          # Wait a bit for quality gate to be calculated (30 seconds)
+          echo "Waiting 30 seconds for quality gate calculation..."
+          sleep 30
+          
+          # Check quality gate status using analysis ID (up to 5 minutes)
+          for i in {1..30}; do
+            RESPONSE=$(curl -s -u "${SONAR_TOKEN}:" \
+              "https://sonarcloud.io/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}")
+            
+            STATUS=$(echo "$RESPONSE" | jq -r '.projectStatus.status // "NONE"')
+            
+            echo "Quality Gate status: $STATUS (attempt $i/30)"
+            
+            if [ "$STATUS" = "OK" ]; then
+              echo "✅ Quality Gate passed!"
+              echo "status=OK" >> $GITHUB_OUTPUT
+              exit 0
+            elif [ "$STATUS" = "ERROR" ]; then
+              echo "❌ Quality Gate failed!"
+              echo "Response:"
+              echo "$RESPONSE" | jq '.'
+              echo "status=ERROR" >> $GITHUB_OUTPUT
+              exit 1
+            elif [ "$STATUS" = "WARN" ]; then
+              echo "⚠️ Quality Gate has warnings!"
+              echo "Response:"
+              echo "$RESPONSE" | jq '.'
+              echo "status=WARN" >> $GITHUB_OUTPUT
+              # For Production, warnings should also fail
+              if [ "${{ github.ref }}" = "refs/heads/production" ]; then
+                exit 1
+              fi
+              exit 0
+            fi
+            
+            # If still NONE or PENDING, wait a bit more
+            sleep 10
+          done
+          
+          echo "⏱️ Quality Gate check timed out after 5 minutes"
+          echo "⚠️ Quality Gate may still be processing. Check SonarCloud dashboard:"
+          echo "   https://sonarcloud.io/project/overview?id=${PROJECT_KEY}"
+          echo "status=TIMEOUT" >> $GITHUB_OUTPUT
+          # For Production, timeout should fail
+          if [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            exit 1
+          fi
+          exit 0
 
   backend-build:
     runs-on: ubuntu-latest
