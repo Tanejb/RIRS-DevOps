@@ -100,6 +100,33 @@ jobs:
                 - "job:backend-tests"
                 - "branch:${{ github.ref_name }}"
 
+      - name: Calculate coverage artifact size
+        id: coverage-size
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then
+            SIZE=$(stat -f%z coverage.xml 2>/dev/null || stat -c%s coverage.xml 2>/dev/null || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
+          else
+            SIZE_KB="0"
+          fi
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
+
+      - name: Send coverage artifact metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.coverage-size.outputs.size_kb }}
+              tags:
+                - "artifact:backend-coverage"
+                - "type:coverage"
+                - "branch:${{ github.ref_name }}"
+
       - name: Upload backend coverage
         uses: actions/upload-artifact@v4
         with:
@@ -174,6 +201,33 @@ jobs:
                 - "job:frontend-tests"
                 - "branch:${{ github.ref_name }}"
 
+      - name: Calculate frontend coverage artifact size
+        id: frontend-coverage-size
+        if: always()
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            SIZE=$(stat -f%z coverage/lcov.info 2>/dev/null || stat -c%s coverage/lcov.info 2>/dev/null || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
+          else
+            SIZE_KB="0"
+          fi
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
+
+      - name: Send frontend coverage artifact metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.frontend-coverage-size.outputs.size_kb }}
+              tags:
+                - "artifact:frontend-coverage"
+                - "type:coverage"
+                - "branch:${{ github.ref_name }}"
+
       - name: Upload frontend coverage
         uses: actions/upload-artifact@v4
         with:
@@ -241,6 +295,33 @@ jobs:
               value: ${{ job.status == 'success' && 1 || 0 }}
               tags:
                 - "job:sonarcloud-analysis"
+                - "branch:${{ github.ref_name }}"
+
+      - name: Calculate SonarCloud report size
+        id: sonarcloud-report-size
+        if: always()
+        run: |
+          if [ -f .scannerwork/report-task.txt ]; then
+            SIZE=$(stat -f%z .scannerwork/report-task.txt 2>/dev/null || stat -c%s .scannerwork/report-task.txt 2>/dev/null || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
+          else
+            SIZE_KB="0"
+          fi
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
+
+      - name: Send SonarCloud report artifact metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.sonarcloud-report-size.outputs.size_kb }}
+              tags:
+                - "artifact:sonarcloud-report"
+                - "type:report"
                 - "branch:${{ github.ref_name }}"
 
       - name: Upload SonarCloud report
@@ -450,11 +531,11 @@ jobs:
           # Get artifact size
           if [ -f backend-build.tar.gz ]; then
             SIZE=$(stat -f%z backend-build.tar.gz 2>/dev/null || stat -c%s backend-build.tar.gz 2>/dev/null || echo "0")
-            SIZE_MB=$(echo "scale=2; $SIZE / 1024 / 1024" | bc -l || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
           else
-            SIZE_MB="0"
+            SIZE_KB="0"
           fi
-          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
 
       - name: Send build metrics to Datadog
         if: always()
@@ -471,12 +552,12 @@ jobs:
                 - "branch:${{ github.ref_name }}"
                 - "status:${{ job.status }}"
             - type: "gauge"
-              name: "ci.build.artifact_size_mb"
-              value: ${{ steps.backend-build.outputs.size_mb }}
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.backend-build.outputs.size_kb }}
               tags:
-                - "job:backend-build"
+                - "artifact:backend-build"
+                - "type:build"
                 - "branch:${{ github.ref_name }}"
-                - "type:backend"
             - type: "gauge"
               name: "ci.job.status"
               value: ${{ job.status == 'success' && 1 || 0 }}
@@ -525,11 +606,11 @@ jobs:
           # Get build size
           if [ -d build ]; then
             SIZE=$(du -sb build | cut -f1 2>/dev/null || echo "0")
-            SIZE_MB=$(echo "scale=2; $SIZE / 1024 / 1024" | bc -l || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
           else
-            SIZE_MB="0"
+            SIZE_KB="0"
           fi
-          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
           exit $EXIT_CODE
 
       - name: Send build metrics to Datadog
@@ -547,12 +628,12 @@ jobs:
                 - "branch:${{ github.ref_name }}"
                 - "status:${{ job.status }}"
             - type: "gauge"
-              name: "ci.build.artifact_size_mb"
-              value: ${{ steps.frontend-build.outputs.size_mb }}
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.frontend-build.outputs.size_kb }}
               tags:
-                - "job:frontend-build"
+                - "artifact:frontend-build"
+                - "type:build"
                 - "branch:${{ github.ref_name }}"
-                - "type:frontend"
             - type: "gauge"
               name: "ci.job.status"
               value: ${{ job.status == 'success' && 1 || 0 }}
@@ -584,6 +665,32 @@ jobs:
         uses: actions/configure-pages@v4
         with:
           enablement: true
+
+      - name: Calculate GitHub Pages artifact size
+        id: pages-size
+        run: |
+          if [ -d docs ]; then
+            SIZE=$(du -sb docs | cut -f1 2>/dev/null || echo "0")
+            SIZE_KB=$(echo "scale=2; $SIZE / 1024" | bc -l || echo "0")
+          else
+            SIZE_KB="0"
+          fi
+          echo "size_kb=$SIZE_KB" >> $GITHUB_OUTPUT
+
+      - name: Send GitHub Pages artifact metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.artifact.size_kb"
+              value: ${{ steps.pages-size.outputs.size_kb }}
+              tags:
+                - "artifact:github-pages"
+                - "type:pages"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
