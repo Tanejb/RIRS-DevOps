@@ -190,6 +190,10 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis
 
+      - name: Start timer
+        id: timer-start
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Download backend coverage
         uses: actions/download-artifact@v4
         with:
@@ -203,10 +207,41 @@ jobs:
           path: app/frontend/coverage/
 
       - name: SonarCloud Scan
+        id: sonarcloud-scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Calculate duration and send metrics to Datadog
+        if: always()
+        id: sonarcloud-metrics
+        run: |
+          END_TIME=$(date +%s)
+          START_TIME="${{ steps.timer-start.outputs.start_time }}"
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Send SonarCloud analysis metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.sonarcloud-metrics.outputs.duration }}
+              tags:
+                - "job:sonarcloud-analysis"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:sonarcloud-analysis"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload SonarCloud report
         uses: actions/upload-artifact@v4
@@ -222,6 +257,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Start timer
+        id: timer-start
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
 
       - name: Download SonarCloud report
         uses: actions/download-artifact@v4
@@ -339,6 +378,41 @@ jobs:
             exit 1
           fi
           exit 0
+
+      - name: Calculate duration
+        if: always()
+        id: quality-gate-duration
+        run: |
+          END_TIME=$(date +%s)
+          START_TIME="${{ steps.timer-start.outputs.start_time }}"
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Send SonarCloud quality gate metrics to Datadog
+        if: always()
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
+          metrics: |
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.quality-gate-duration.outputs.duration }}
+              tags:
+                - "job:sonarcloud-quality-gate"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:sonarcloud-quality-gate"
+                - "branch:${{ github.ref_name }}"
+            - type: "gauge"
+              name: "ci.sonarcloud.quality_gate.status"
+              value: ${{ steps.quality-gate-check.outputs.status == 'OK' && 1 || 0 }}
+              tags:
+                - "branch:${{ github.ref_name }}"
 
   backend-build:
     runs-on: ubuntu-latest
