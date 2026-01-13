@@ -71,7 +71,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.duration"
@@ -151,7 +151,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.duration"
@@ -387,7 +387,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.duration"
@@ -463,7 +463,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.duration"
@@ -559,7 +559,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.status"
@@ -607,7 +607,7 @@ jobs:
         uses: masci/datadog@v1
         with:
           api-key: ${{ secrets.DATADOG_API_KEY }}
-          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-url: ${{ secrets.DATADOG_API_URL || 'https://api.datadoghq.eu' }}
           metrics: |
             - type: "gauge"
               name: "ci.job.status"
