@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
-from pathlib import Path
 
 # Load environment variables
 # Look for .env in backend directory
@@ -21,13 +20,22 @@ def create_app():
     app = Flask(__name__)
     
     # Configuration
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-this')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Tokens don't expire for simplicity
+    jwt_secret = os.getenv('JWT_SECRET_KEY')
+    if not jwt_secret:
+        raise ValueError('JWT_SECRET_KEY environment variable must be set')
+    app.config['JWT_SECRET_KEY'] = jwt_secret
+    # Set token expiration to 24 hours for security
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 86400  # 24 hours in seconds
     
     # Initialize extensions
-    # CORS configuration - allow all origins for production deployment
-    # In production, you can restrict this to specific domains
-    allowed_origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
+    # CORS configuration - restrict to specific origins in production
+    allowed_origins_env = os.getenv('ALLOWED_ORIGINS', '')
+    if allowed_origins_env:
+        allowed_origins = [origin.strip() for origin in allowed_origins_env.split(',') if origin.strip()]
+    else:
+        # Default to localhost for development only
+        allowed_origins = ['http://localhost:3000', 'http://localhost:80']
+    
     CORS(app, 
          resources={r"/api/*": {"origins": allowed_origins}},
          supports_credentials=True)

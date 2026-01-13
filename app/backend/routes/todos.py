@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from bson import ObjectId
+from bson.errors import InvalidId
 try:
     from backend.models import db
 except ImportError:
@@ -37,11 +38,22 @@ def create_todo():
         if not data or not data.get('title'):
             return jsonify({'error': 'Title is required'}), 400
         
+        # Input validation and sanitization
+        title = data['title'].strip()
+        description = data.get('description', '').strip()
+        
+        if not title or len(title) == 0:
+            return jsonify({'error': 'Title cannot be empty'}), 400
+        if len(title) > 200:
+            return jsonify({'error': 'Title must be less than 200 characters'}), 400
+        if len(description) > 1000:
+            return jsonify({'error': 'Description must be less than 1000 characters'}), 400
+        
         # Create new todo
         result = db.create_todo(
             current_user,
-            data['title'],
-            data.get('description', '')
+            title,
+            description
         )
         
         # Get the created todo
@@ -65,17 +77,26 @@ def update_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except:
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
-        # Prepare update data
+        # Prepare update data with validation
         update_data = {}
         if 'title' in data:
-            update_data['title'] = data['title']
+            title = data['title'].strip()
+            if not title or len(title) == 0:
+                return jsonify({'error': 'Title cannot be empty'}), 400
+            if len(title) > 200:
+                return jsonify({'error': 'Title must be less than 200 characters'}), 400
+            update_data['title'] = title
         if 'description' in data:
-            update_data['description'] = data['description']
+            description = data['description'].strip()
+            if len(description) > 1000:
+                return jsonify({'error': 'Description must be less than 1000 characters'}), 400
+            update_data['description'] = description
         if 'completed' in data:
-            update_data['completed'] = data['completed']
+            # Ensure completed is a boolean
+            update_data['completed'] = bool(data['completed'])
         
         # Update todo
         result = db.update_todo(object_id, current_user, update_data)
@@ -103,7 +124,7 @@ def delete_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except:
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
         # Delete todo
@@ -126,7 +147,7 @@ def toggle_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except:
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
         # Toggle todo
