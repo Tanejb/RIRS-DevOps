@@ -217,6 +217,12 @@ Ta razdelek opisuje implementirane monitoring orodja, varnostne skeniranja in op
 
 **Zaslonski posnetek:** GitHub Security tab z CodeQL rezultati
 
+<img width="1262" height="700" alt="image" src="https://github.com/user-attachments/assets/25bc09b0-8687-4b5a-8b94-dd200aa25b02" />
+
+<img width="1262" height="705" alt="image" src="https://github.com/user-attachments/assets/451b6d54-d027-4d5f-93ad-00255a98854e" />
+
+
+
 **Rezultat:**
 - Večina kritičnih ranljivosti odpravljena
 - Koda zdaj uporablja best practices za varnost
