@@ -43,3 +43,55 @@ def test_profile_with_token(client):
     assert resp.status_code == 200
     assert resp.get_json()["username"] == "erin"
 
+
+def test_register_short_username(client):
+    resp = client.post("/api/auth/register", json={"username": "ab", "password": "password123"})
+    assert resp.status_code == 400
+    assert "at least 3 characters" in resp.get_json()["error"]
+
+
+def test_register_long_username(client):
+    resp = client.post("/api/auth/register", json={"username": "a" * 51, "password": "password123"})
+    assert resp.status_code == 400
+    assert "less than 50 characters" in resp.get_json()["error"]
+
+
+def test_register_short_password(client):
+    resp = client.post("/api/auth/register", json={"username": "user1", "password": "short"})
+    assert resp.status_code == 400
+    assert "at least 6 characters" in resp.get_json()["error"]
+
+
+def test_register_long_password(client):
+    resp = client.post("/api/auth/register", json={"username": "user2", "password": "a" * 129})
+    assert resp.status_code == 400
+    assert "less than 128 characters" in resp.get_json()["error"]
+
+
+def test_register_missing_fields(client):
+    resp = client.post("/api/auth/register", json={})
+    assert resp.status_code == 400
+    assert "required" in resp.get_json()["error"]
+
+
+def test_login_missing_fields(client):
+    resp = client.post("/api/auth/login", json={})
+    assert resp.status_code == 400
+    assert "required" in resp.get_json()["error"]
+
+
+def test_login_empty_username(client):
+    resp = client.post("/api/auth/login", json={"username": "", "password": "password123"})
+    assert resp.status_code == 400
+    assert "required" in resp.get_json()["error"]
+
+
+def test_profile_user_not_found(client, app):
+    # Create a token for a user that doesn't exist in DB
+    from flask_jwt_extended import create_access_token
+    with app.app_context():
+        token = create_access_token(identity="nonexistent")
+    resp = client.get("/api/auth/profile", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"]
+

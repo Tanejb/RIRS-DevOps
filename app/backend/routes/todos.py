@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from bson import ObjectId
+from bson.errors import InvalidId
 try:
     from backend.models import db
 except ImportError:
@@ -76,7 +77,7 @@ def update_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
         # Prepare update data with validation
@@ -123,7 +124,7 @@ def delete_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
         # Delete todo
@@ -146,7 +147,7 @@ def toggle_todo(todo_id):
         # Convert string ID to ObjectId
         try:
             object_id = ObjectId(todo_id)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidId):
             return jsonify({'error': 'Invalid todo ID'}), 400
         
         # Toggle todo

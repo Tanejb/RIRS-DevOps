@@ -79,8 +79,131 @@ def test_invalid_todo_id(client):
         json={"title": "X"},
         headers=headers,
     )
-    # Code may return 400 or 500 depending on exception handling
-    assert resp.status_code in [400, 500]
-    error_msg = resp.get_json().get("error", "")
-    assert "Invalid" in error_msg or "todo ID" in error_msg.lower() or len(error_msg) > 0
+    assert resp.status_code == 400
+    assert "Invalid todo ID" in resp.get_json()["error"]
+
+
+def test_create_todo_empty_title(client):
+    headers = _login_headers(client)
+    resp = client.post(
+        "/api/todos/",
+        json={"title": "   ", "description": "desc"},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "cannot be empty" in resp.get_json()["error"]
+
+
+def test_create_todo_long_title(client):
+    headers = _login_headers(client)
+    resp = client.post(
+        "/api/todos/",
+        json={"title": "a" * 201, "description": "desc"},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "less than 200 characters" in resp.get_json()["error"]
+
+
+def test_create_todo_long_description(client):
+    headers = _login_headers(client)
+    resp = client.post(
+        "/api/todos/",
+        json={"title": "Title", "description": "a" * 1001},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "less than 1000 characters" in resp.get_json()["error"]
+
+
+def test_update_todo_empty_title(client):
+    headers = _login_headers(client)
+    todo = _create_todo(client, headers).get_json()["todo"]
+    resp = client.put(
+        f"/api/todos/{todo['_id']}",
+        json={"title": "   "},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "cannot be empty" in resp.get_json()["error"]
+
+
+def test_update_todo_long_title(client):
+    headers = _login_headers(client)
+    todo = _create_todo(client, headers).get_json()["todo"]
+    resp = client.put(
+        f"/api/todos/{todo['_id']}",
+        json={"title": "a" * 201},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "less than 200 characters" in resp.get_json()["error"]
+
+
+def test_update_todo_long_description(client):
+    headers = _login_headers(client)
+    todo = _create_todo(client, headers).get_json()["todo"]
+    resp = client.put(
+        f"/api/todos/{todo['_id']}",
+        json={"description": "a" * 1001},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "less than 1000 characters" in resp.get_json()["error"]
+
+
+def test_update_todo_not_found(client):
+    headers = _login_headers(client)
+    from bson import ObjectId
+    fake_id = str(ObjectId())
+    resp = client.put(
+        f"/api/todos/{fake_id}",
+        json={"title": "Updated"},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"]
+
+
+def test_delete_todo_not_found(client):
+    headers = _login_headers(client)
+    from bson import ObjectId
+    fake_id = str(ObjectId())
+    resp = client.delete(f"/api/todos/{fake_id}", headers=headers)
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"]
+
+
+def test_toggle_todo_not_found(client):
+    headers = _login_headers(client)
+    from bson import ObjectId
+    fake_id = str(ObjectId())
+    resp = client.patch(f"/api/todos/{fake_id}/toggle", headers=headers)
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"]
+
+
+def test_toggle_invalid_id(client):
+    headers = _login_headers(client)
+    resp = client.patch("/api/todos/notanid/toggle", headers=headers)
+    assert resp.status_code == 400
+    assert "Invalid todo ID" in resp.get_json()["error"]
+
+
+def test_delete_invalid_id(client):
+    headers = _login_headers(client)
+    resp = client.delete("/api/todos/notanid", headers=headers)
+    assert resp.status_code == 400
+    assert "Invalid todo ID" in resp.get_json()["error"]
+
+
+def test_create_todo_missing_title(client):
+    headers = _login_headers(client)
+    resp = client.post(
+        "/api/todos/",
+        json={"description": "desc"},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "required" in resp.get_json()["error"]
 
