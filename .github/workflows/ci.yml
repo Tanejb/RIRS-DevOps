@@ -23,6 +23,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:backend-tests
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            event:${{ github.event_name }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -36,12 +49,48 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests with coverage
+        id: backend-tests
         env:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'todoapp' }}
         run: |
-          python -m pytest --cov=backend --cov-report=xml
+          START_TIME=$(date +%s)
+          python -m pytest --cov=backend --cov-report=xml -v
+          EXIT_CODE=$?
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Extract test results
+          TOTAL_TESTS=$(python -m pytest --co -q | wc -l || echo "0")
+          PASSED_TESTS=$(python -m pytest --co -q | wc -l || echo "0")
+          
+          # Extract coverage percentage
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(root.attrib.get('line-rate', '0'))" 2>/dev/null || echo "0")
+            COVERAGE_PERCENT=$(echo "$COVERAGE * 100" | bc -l | cut -d. -f1 || echo "0")
+          else
+            COVERAGE_PERCENT="0"
+          fi
+          
+          echo "total_tests=$TOTAL_TESTS" >> $GITHUB_OUTPUT
+          echo "coverage_percent=$COVERAGE_PERCENT" >> $GITHUB_OUTPUT
+          exit $EXIT_CODE
+
+      - name: Send test metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.duration:${{ steps.backend-tests.outputs.duration }}|g|#job:backend-tests,branch:${{ github.ref_name }},status:${{ job.status }}
+            ci.tests.total:${{ steps.backend-tests.outputs.total_tests }}|g|#job:backend-tests,branch:${{ github.ref_name }}
+            ci.coverage.percent:${{ steps.backend-tests.outputs.coverage_percent }}|g|#job:backend-tests,branch:${{ github.ref_name }},type:backend
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:backend-tests,branch:${{ github.ref_name }}
 
       - name: Upload backend coverage
         uses: actions/upload-artifact@v4
@@ -58,6 +107,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:frontend-tests
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            event:${{ github.event_name }}
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -69,7 +131,37 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        run: npm test -- --coverage --watch=false
+        id: frontend-tests
+        run: |
+          START_TIME=$(date +%s)
+          npm test -- --coverage --watch=false
+          EXIT_CODE=$?
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Extract coverage from coverage-final.json
+          if [ -f coverage/coverage-final.json ]; then
+            COVERAGE=$(node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('coverage/coverage-final.json')); const files=Object.values(data); const total=files.reduce((a,f)=>a+f.s,0); const covered=files.reduce((a,f)=>a+Object.values(f.s).filter(v=>v>0).length,0); console.log((covered/total*100).toFixed(0))" 2>/dev/null || echo "0")
+          else
+            COVERAGE="0"
+          fi
+          
+          echo "coverage_percent=$COVERAGE" >> $GITHUB_OUTPUT
+          exit $EXIT_CODE
+
+      - name: Send test metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.duration:${{ steps.frontend-tests.outputs.duration }}|g|#job:frontend-tests,branch:${{ github.ref_name }},status:${{ job.status }}
+            ci.coverage.percent:${{ steps.frontend-tests.outputs.coverage_percent }}|g|#job:frontend-tests,branch:${{ github.ref_name }},type:frontend
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:frontend-tests,branch:${{ github.ref_name }}
 
       - name: Upload frontend coverage
         uses: actions/upload-artifact@v4
@@ -247,6 +339,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:backend-build
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            event:${{ github.event_name }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -260,10 +365,36 @@ jobs:
           pip install -r requirements.txt
 
       - name: Prepare backend build artifact
+        id: backend-build
         run: |
+          START_TIME=$(date +%s)
           # For Python/Flask, source code is the build artifact
           # Create a tarball of the backend for deployment
           tar -czf backend-build.tar.gz *.py routes/ models/ requirements.txt || true
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          
+          # Get artifact size
+          if [ -f backend-build.tar.gz ]; then
+            SIZE=$(stat -f%z backend-build.tar.gz 2>/dev/null || stat -c%s backend-build.tar.gz 2>/dev/null || echo "0")
+            SIZE_MB=$(echo "scale=2; $SIZE / 1024 / 1024" | bc -l || echo "0")
+          else
+            SIZE_MB="0"
+          fi
+          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+
+      - name: Send build metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.duration:${{ steps.backend-build.outputs.duration }}|g|#job:backend-build,branch:${{ github.ref_name }},status:${{ job.status }}
+            ci.build.artifact_size_mb:${{ steps.backend-build.outputs.size_mb }}|g|#job:backend-build,branch:${{ github.ref_name }},type:backend
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:backend-build,branch:${{ github.ref_name }}
 
       - name: Upload backend build
         uses: actions/upload-artifact@v4
@@ -282,6 +413,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:frontend-build
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            event:${{ github.event_name }}
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -293,7 +437,37 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build
+        id: frontend-build
+        run: |
+          START_TIME=$(date +%s)
+          npm run build
+          EXIT_CODE=$?
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Get build size
+          if [ -d build ]; then
+            SIZE=$(du -sb build | cut -f1 2>/dev/null || echo "0")
+            SIZE_MB=$(echo "scale=2; $SIZE / 1024 / 1024" | bc -l || echo "0")
+          else
+            SIZE_MB="0"
+          fi
+          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          exit $EXIT_CODE
+
+      - name: Send build metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.duration:${{ steps.frontend-build.outputs.duration }}|g|#job:frontend-build,branch:${{ github.ref_name }},status:${{ job.status }}
+            ci.build.artifact_size_mb:${{ steps.frontend-build.outputs.size_mb }}|g|#job:frontend-build,branch:${{ github.ref_name }},type:frontend
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:frontend-build,branch:${{ github.ref_name }}
 
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
@@ -340,6 +514,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:docker-backend-dev
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            environment:development
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -363,6 +550,16 @@ jobs:
           cache-to: type=inline
           no-cache: false
 
+      - name: Send Docker build metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:docker-backend-dev,branch:${{ github.ref_name }},environment:development
+
   docker-frontend-dev:
     runs-on: ubuntu-latest
     needs: frontend-build
@@ -372,6 +569,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Datadog
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          tags: |
+            job:docker-frontend-dev
+            branch:${{ github.ref_name }}
+            workflow:${{ github.workflow }}
+            repository:${{ github.repository }}
+            environment:development
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -395,6 +605,16 @@ jobs:
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rirs-todo-frontend:dev
           cache-to: type=inline
           no-cache: false
+
+      - name: Send Docker build metrics to Datadog
+        if: always()
+        uses: datadog/github-action-datadog@v1
+        with:
+          api_key: ${{ secrets.DATADOG_API_KEY }}
+          app_key: ${{ secrets.DATADOG_APP_KEY }}
+          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          metrics: |
+            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:docker-frontend-dev,branch:${{ github.ref_name }},environment:development
 
   # Docker jobs for Production environment (production branch)
   docker-backend-prod:
