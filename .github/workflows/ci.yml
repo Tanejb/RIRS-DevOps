@@ -23,19 +23,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:backend-tests
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            event:${{ github.event_name }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -81,16 +68,37 @@ jobs:
 
       - name: Send test metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.duration:${{ steps.backend-tests.outputs.duration }}|g|#job:backend-tests,branch:${{ github.ref_name }},status:${{ job.status }}
-            ci.tests.total:${{ steps.backend-tests.outputs.total_tests }}|g|#job:backend-tests,branch:${{ github.ref_name }}
-            ci.coverage.percent:${{ steps.backend-tests.outputs.coverage_percent }}|g|#job:backend-tests,branch:${{ github.ref_name }},type:backend
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:backend-tests,branch:${{ github.ref_name }}
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.backend-tests.outputs.duration }}
+              tags:
+                - "job:backend-tests"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.tests.total"
+              value: ${{ steps.backend-tests.outputs.total_tests }}
+              tags:
+                - "job:backend-tests"
+                - "branch:${{ github.ref_name }}"
+            - type: "gauge"
+              name: "ci.coverage.percent"
+              value: ${{ steps.backend-tests.outputs.coverage_percent }}
+              tags:
+                - "job:backend-tests"
+                - "branch:${{ github.ref_name }}"
+                - "type:backend"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:backend-tests"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload backend coverage
         uses: actions/upload-artifact@v4
@@ -106,19 +114,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:frontend-tests
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            event:${{ github.event_name }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -153,15 +148,31 @@ jobs:
 
       - name: Send test metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.duration:${{ steps.frontend-tests.outputs.duration }}|g|#job:frontend-tests,branch:${{ github.ref_name }},status:${{ job.status }}
-            ci.coverage.percent:${{ steps.frontend-tests.outputs.coverage_percent }}|g|#job:frontend-tests,branch:${{ github.ref_name }},type:frontend
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:frontend-tests,branch:${{ github.ref_name }}
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.frontend-tests.outputs.duration }}
+              tags:
+                - "job:frontend-tests"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.coverage.percent"
+              value: ${{ steps.frontend-tests.outputs.coverage_percent }}
+              tags:
+                - "job:frontend-tests"
+                - "branch:${{ github.ref_name }}"
+                - "type:frontend"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:frontend-tests"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload frontend coverage
         uses: actions/upload-artifact@v4
@@ -339,19 +350,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:backend-build
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            event:${{ github.event_name }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -386,15 +384,31 @@ jobs:
 
       - name: Send build metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.duration:${{ steps.backend-build.outputs.duration }}|g|#job:backend-build,branch:${{ github.ref_name }},status:${{ job.status }}
-            ci.build.artifact_size_mb:${{ steps.backend-build.outputs.size_mb }}|g|#job:backend-build,branch:${{ github.ref_name }},type:backend
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:backend-build,branch:${{ github.ref_name }}
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.backend-build.outputs.duration }}
+              tags:
+                - "job:backend-build"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.build.artifact_size_mb"
+              value: ${{ steps.backend-build.outputs.size_mb }}
+              tags:
+                - "job:backend-build"
+                - "branch:${{ github.ref_name }}"
+                - "type:backend"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:backend-build"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload backend build
         uses: actions/upload-artifact@v4
@@ -412,19 +426,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:frontend-build
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            event:${{ github.event_name }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -459,15 +460,31 @@ jobs:
 
       - name: Send build metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.duration:${{ steps.frontend-build.outputs.duration }}|g|#job:frontend-build,branch:${{ github.ref_name }},status:${{ job.status }}
-            ci.build.artifact_size_mb:${{ steps.frontend-build.outputs.size_mb }}|g|#job:frontend-build,branch:${{ github.ref_name }},type:frontend
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:frontend-build,branch:${{ github.ref_name }}
+            - type: "gauge"
+              name: "ci.job.duration"
+              value: ${{ steps.frontend-build.outputs.duration }}
+              tags:
+                - "job:frontend-build"
+                - "branch:${{ github.ref_name }}"
+                - "status:${{ job.status }}"
+            - type: "gauge"
+              name: "ci.build.artifact_size_mb"
+              value: ${{ steps.frontend-build.outputs.size_mb }}
+              tags:
+                - "job:frontend-build"
+                - "branch:${{ github.ref_name }}"
+                - "type:frontend"
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:frontend-build"
+                - "branch:${{ github.ref_name }}"
 
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
@@ -514,19 +531,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:docker-backend-dev
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            environment:development
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -552,13 +556,18 @@ jobs:
 
       - name: Send Docker build metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:docker-backend-dev,branch:${{ github.ref_name }},environment:development
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:docker-backend-dev"
+                - "branch:${{ github.ref_name }}"
+                - "environment:development"
 
   docker-frontend-dev:
     runs-on: ubuntu-latest
@@ -569,19 +578,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Datadog
-        uses: datadog/github-action-datadog@v1
-        with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
-          tags: |
-            job:docker-frontend-dev
-            branch:${{ github.ref_name }}
-            workflow:${{ github.workflow }}
-            repository:${{ github.repository }}
-            environment:development
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -608,13 +604,18 @@ jobs:
 
       - name: Send Docker build metrics to Datadog
         if: always()
-        uses: datadog/github-action-datadog@v1
+        uses: masci/datadog@v1
         with:
-          api_key: ${{ secrets.DATADOG_API_KEY }}
-          app_key: ${{ secrets.DATADOG_APP_KEY }}
-          datadog_site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          datadog-site: ${{ secrets.DATADOG_SITE || 'datadoghq.eu' }}
           metrics: |
-            ci.job.status:${{ job.status == 'success' && 1 || 0 }}|g|#job:docker-frontend-dev,branch:${{ github.ref_name }},environment:development
+            - type: "gauge"
+              name: "ci.job.status"
+              value: ${{ job.status == 'success' && 1 || 0 }}
+              tags:
+                - "job:docker-frontend-dev"
+                - "branch:${{ github.ref_name }}"
+                - "environment:development"
 
   # Docker jobs for Production environment (production branch)
   docker-backend-prod:
