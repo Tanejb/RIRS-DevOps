@@ -16,6 +16,9 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     defaults:
       run:
         working-directory: app/backend
@@ -135,6 +138,9 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     defaults:
       run:
         working-directory: app/frontend
@@ -237,6 +243,9 @@ jobs:
   # SonarCloud analysis
   sonarcloud-analysis:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs: [backend-tests, frontend-tests]
     steps:
       - name: Checkout
@@ -334,6 +343,9 @@ jobs:
   # SonarCloud Quality Gate check
   sonarcloud-quality-gate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs: sonarcloud-analysis
     steps:
       - name: Checkout
@@ -497,6 +509,9 @@ jobs:
 
   backend-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs: backend-tests
     defaults:
       run:
@@ -574,6 +589,9 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs: frontend-tests
     defaults:
       run:
@@ -704,6 +722,8 @@ jobs:
   # Docker jobs for Development environment (master branch)
   docker-backend-dev:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: backend-build
     environment:
       name: Development
@@ -752,6 +772,8 @@ jobs:
 
   docker-frontend-dev:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: frontend-build
     environment:
       name: Development
@@ -801,6 +823,8 @@ jobs:
   # Docker jobs for Production environment (production branch)
   docker-backend-prod:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [backend-build, sonarcloud-quality-gate]
     environment:
       name: Production
@@ -834,6 +858,8 @@ jobs:
 
   docker-frontend-prod:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [frontend-build, sonarcloud-quality-gate]
     environment:
       name: Production
