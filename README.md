@@ -184,6 +184,7 @@ Ta razdelek opisuje implementirane monitoring orodja, varnostne skeniranja in op
 - SonarCloud jobi so najdaljši (odvisni od SonarCloud API-ja)
 - Build jobi so relativno hitri zaradi caching mehanizmov
 - Coverage se vzdržuje nad 80% (zahteva SonarCloud Quality Gate)
+  <img width="1184" height="627" alt="image" src="https://github.com/user-attachments/assets/9c7a245d-5160-449f-abec-1345f43fb5a3" />
 
 ---
 
@@ -257,6 +258,7 @@ Ta razdelek opisuje implementirane monitoring orodja, varnostne skeniranja in op
 - Prehod na Alpine verzijo (`python:3.11-alpine`) - lahko povzroči težave z nekaterimi paketi
 
 **Zaslonski posnetek:** Snyk dashboard z rezultati skeniranja Dockerfile datotek
+<img width="1637" height="487" alt="image" src="https://github.com/user-attachments/assets/230d8b64-a15f-4d55-b146-d4f46db3dfd6" />
 
 ---
 
