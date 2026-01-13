@@ -17,8 +17,18 @@ def register():
         if not data or not data.get('username') or not data.get('password'):
             return jsonify({'error': 'Username and password are required'}), 400
         
-        username = data['username']
+        username = data['username'].strip()
         password = data['password']
+        
+        # Input validation
+        if not username or len(username) < 3:
+            return jsonify({'error': 'Username must be at least 3 characters long'}), 400
+        if len(username) > 50:
+            return jsonify({'error': 'Username must be less than 50 characters'}), 400
+        if not password or len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters long'}), 400
+        if len(password) > 128:
+            return jsonify({'error': 'Password must be less than 128 characters'}), 400
         
         # Check if user already exists
         existing_user = db.find_user(username)
@@ -44,8 +54,12 @@ def login():
         if not data or not data.get('username') or not data.get('password'):
             return jsonify({'error': 'Username and password are required'}), 400
         
-        username = data['username']
+        username = data['username'].strip()
         password = data['password']
+        
+        # Input validation
+        if not username:
+            return jsonify({'error': 'Username is required'}), 400
         
         # Check if user exists
         user = db.find_user(username)
